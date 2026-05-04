@@ -114,7 +114,7 @@ To make sure that the managed identity has the right permissions within Microsof
 | Microsoft Graph | User.ReadWrite.All, Mail.Send, AuditLog.Read.All, SynchronizationData-User.Upload | Required to grab the user details and set the email address to plus addressing, execute the API call against the Inbound Provisioning API and being able to send an email via a Microsoft Graph API call. |
 | Microsoft Entra | Authentication Administrator, Access Package Assignment Administrator (on ELUK 2026 Catalog). | Required to generate the temporary access pass for a non-privileged user account and execute the API callback against the access package request in Entitlement Management |
 
-For the Microsoft Graph permissions the following script can be used: [Configure-MsGRaphPermissions.ps1](../../resources/resource-5-msgraph-permissions/Configure-MsGraphPermissions.ps1)
+For the Microsoft Graph permissions the following script can be used: [Configure-MsGRaphPermissions.ps1](../../resources/resource-4-msgraph-permissions/Configure-MsGraphPermissions.ps1)
 For the Microsoft Entra permissions the two roles need to be manually assigned.
 
 Once you're ready, verify if the MS Graph permissions and roles have been configured successfully on the managed identity and continue to the next lab exercise.
