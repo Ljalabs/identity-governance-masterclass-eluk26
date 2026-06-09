@@ -1,93 +1,220 @@
 # Lab 2 - Privileged Users - Identity Stores - SCIM
 
-In this lab you will learn about identity personas, set up SCIM 2.0 API provisioning for privileged users, and configure governance controls around privileged account lifecycle management.
+In this lab you will learn about identity personas, create directory extensions and add them as user attributes. You will learn how to use persona as a filter/scope. And for last we will set up SCIM 2.0 API provisioning for users/groups, and test some of the functionallity in the API.
 
 > 📌 **About SCIM Provisioning in Entra ID**  
 > Entra ID offers multiple provisioning approaches:
-> - **Lab 1 (API-driven provisioning app)**: Built-in provisioning feature via Enterprise Apps, uses application-specific endpoints and tokens
-> - **Lab 2 (SCIM 2.0 API)**: Direct programmatic access using OAuth 2.0 authentication, Microsoft Graph endpoints, requires P1 license and Azure billing
-> 
-> This lab focuses on the **SCIM 2.0 API** approach for direct, programmatic control. See [Microsoft Learn: SCIM Support in Entra ID](https://learn.microsoft.com/en-us/entra/identity/app-provisioning/scim-support-in-entra-id) for comparison. 
-> Sjekke pris og evt. bare gjenbruke provisioning app med tillegg av persona!!!
+> - **Lab 1 showed us how to use the API-driven provisioning app**: Built-in provisioning feature via Enterprise Apps, uses application-specific endpoints and tokens. We will reuse this for the first tasks in lab 2.
+> - **Lab 2 also includes enabling and testing of the SCIM 2.0 API**: Direct programmatic access using OAuth 2.0 authentication and different Microsoft Graph/SCIM endpoints.
 
 &nbsp;
 
-## Lab 2.1 - Understanding Identity Personas & Attribute Design
+## Lab 2.1 - Define Personas and Attribute Mapping
 
-Identity personas help you define different user types and their attributes within your organization. In this section, you will design personas for standard and privileged users.
+In this section, you define identity personas and the attribute model that will be used in SCIM payloads and governance rules.
 
 ### Tasks:
 
-1. **Define Identity Personas** - Create 2 personas for your organization:
-   - Standard User (regular employees). Suggestion: EndUser
-   - Administrator accounts (dedicated administrator accounts). Suggestion: Admin 
+1. **Define identity personas for your organization**
+   - Create the personas you need, for example:
+     - `EndUser` (standard employees)
+     - `Admin` (dedicated privileged accounts)
+     - `Service` (service accounts) - Optional!
 
-2. **Optional! Map Attributes for Each Persona** - For each persona, identify key attributes:
-   - Core attributes: userName, displayName, email, userType
-   - Enterprise attributes: department, company, costCenter, division
-   - Custom attributes for privileged users: hireDateDate, leaveDate, title (e.g., "Privileged Admin")
-   - Naming conventions: consider using suffixes (e.g., `.admin`) or prefixes for privileged accounts
-
-3. **Review Sample Payloads** - Examine the sample SCIM payloads in the resources folder, and add Persona under custom schema extension (in the same way as in Lab 1.3):
-   - [minimum-user.json](../../../resources/resource-2-scim-sample-payloads/minimum-user.json) - Basic user with required fields
-   - [privileged-user.json](../../../resources/resource-2-scim-sample-payloads/privileged-user.json) - Privileged user with enterprise and custom extensions
-   - [full-user.json](../../../resources/resource-2-scim-sample-payloads/full-user.json) - Complete user profile with all attributes
-
-> 💡 **Tip**  
-> Pay attention to the `schemas` array in the payloads. Custom extension schemas follow the format `urn:ietf:params:scim:schemas:extension:yourorgname:1.0:User`. These allow you to add organization-specific attributes beyond the SCIM standard. E.g. Persona
+2. **Map attributes for each persona**
+   - Include `Persona` as a custom extension attribute in your design, similar to how custom attributes (like hireDate/leaveDate examples from lab 1) are modeled.
+   - Document expected values for each persona (for example `EndUser`, `Admin`, `Service`) so you can reuse them consistently in Lab 2.2 and Lab 2.4. Only if you want to make more changes than adding persona.
 
 &nbsp;
 
-## Lab 2.1.1 - Create Directory Extensions for Persona Classification
+## Lab 2.2 - Update SCIM JSON Payloads for Personas
 
-Directory extensions in Entra ID allow you to extend the user object with custom attributes that can be used for classification, governance, and provisioning logic. In this section, you will create a custom extension to classify users by persona type.
+In this section, you update the sample payloads so they reflect the personas and attribute mappings you defined in Lab 2.1. 
+
+### Tasks:
+
+1. **Review sample payload files**
+   - [privileged-user.json](../../resources/resource-2-scim-sample-payloads/privileged-user.json)  (e.g. persona Admin)
+   - [full-user.json](../../resources/resource-2-scim-sample-payloads/full-user.json) (e.g. persona EndUser)
+   - [service-user.json](../../resources/resource-2-scim-sample-payloads/service-user.json) (e.g. persona Service)
+
+2. **Add or update persona-related attributes**
+   - Add `persona` in your custom extension block (same pattern as other extension fields such as `HireDate` and `LeaveDate` in lab 1).
+   - Ensure the `schemas` array includes your custom extension namespace. (Should be there already, `urn:ietf:params:scim:schemas:extension:yourorgname:1.0:User`)
+   - Align each payload to one of your defined personas. Add `Persona` under `countryCode`
+   - Keep this as payload preparation only; provisioning app schema/mapping configuration is done in Lab 2.4.
+
+3. **Create persona-specific payload variants**
+   - Prepare at least one payload per persona you defined.
+   - Update values like `userName`, `displayName`, and email domain to match your tenant and naming convention.
+
+&nbsp;
+
+## Lab 2.3 - Create Directory Extensions App and Run Script
+
+In this section, you create an app registration used for directory extension definitions and run the extension creation script.
 
 ### Prerequisites:
 - **Application Administrator** or **Global Administrator** role
 - Microsoft Graph PowerShell SDK installed
 
-### What You'll Create:
-A custom extension attribute named `persona` that will store the user's persona type with allowed values you defined in the first task in lab 2.1:
-- `Admin` - Administrative or privileged user
-- `Service` - Service account for applications
-- `Test` - Test user for development/testing
-- `EndUser` - Standard end user
+### Tasks:
 
-> 📌 **Important**  
-> Creating **directory extension definitions** is done through Microsoft Graph (API/PowerShell). The Entra admin center UI can show and use extension attributes in some places (for example dynamic membership rules), but the extension definition itself should be created via Graph.
+1. **Create app registration for directory extensions**
+   - Go to **Microsoft Entra admin center** → **App registrations** → **+ New registration**.
+   - Name: `ELUK26-Directory-Extensions` (or similar).
+   - Supported account types: **Single tenant only - {TenantName}**.
+   - Save:
+     - **Tenant ID**
+     - **Object ID**
+     - **Client ID**
 
-### Step 1 - Create App Registration in Entra Admin Center
+2. **Edit the directory extension script to match your attributes**
+   - Open [Create-DirectoryExtensions.ps1](../../resources/resource-4-powershell-scripts/Create-DirectoryExtensions.ps1).
+   - Update the script with tenantID and objectID for application in previous step. Run the script to create the extension attributes from Lab 2.1 (including `persona` and any additional custom attributes you defined).
 
-1. Go to **Microsoft Entra admin center** → **App registrations** → **+ New registration**
-2. Name: `ELUK26-Directory-Extensions` (or similar)
-3. Supported account types: **Single tenant only - {TenantName}**
-4. Click **Register**
-5. Save (from the app overview):
-   - **Application (client) ID**
-   - **Object ID** 
-
-### Step 2 - Define Directory Extension via PowerShell
-
-Use the script in the repository:
-
-- [Create-DirectoryExtensions.ps1](../../../resources/resource-4-powershell-scripts/Create-DirectoryExtensions.ps1)
-
-Run the script and define the directory extension (`persona`) for the app registration you created in Step 1.
-
-
-> 💡 **Tip**  
-> Directory extensions can also be used with dynamic group membership rules for automatic role assignment or access control. For example, you could create a dynamic group that automatically includes all users where `persona == "admin"`.
+3. **Run the script for your app registration**
+   - Execute the script with target to app created in Task 1.
+   - Verify the extensions are created successfully in Entra ID. Save the name of the extension for later: e.g. extension_{clientIdforApp}_persona. ClientID in extension name shall match the client ID saved in task 1.
 
 &nbsp;
 
-## Lab 2.2 - Enable and Configure SCIM 2.0 API
+## Lab 2.4 - Update Provisioning App Attribute Mapping and Test
 
-In this section, you will enable the SCIM 2.0 API in Entra ID and set up authentication credentials for programmatic provisioning of privileged users.
+In this section, you update the inbound provisioning app schema and mappings so the `persona` extension attribute is handled correctly, and then validate provisioning for both a regular and a privileged user.
+
+### Tasks:
+
+1. **Open the provisioning app and schema configuration**
+   - Go to **Microsoft Entra admin center** → **Enterprise applications**.
+   - Open the provisioning app you are using (reuse from Lab 1).
+   - Go to **Provisioning**.
+   - Open **Mappings** and the user mapping configuration.
+
+2. **Edit the API attribute list (Lab 1.3 style) and add Persona schema attribute**
+   - In the mappings view, click **Show advanced options**.
+   - Select **Edit attribute list for API**.
+   - Add this API attribute (replace `yourorgnamehere` with your own namespace if needed):
+     - `urn:ietf:params:scim:schemas:extension:yourorgnamehere:1.0:User:Persona`
+   - Save and refresh the provisioning app configuration.
+
+3. **Add or update attribute mapping for Persona**
+   - In user mappings, click **Add New Mapping** (or edit existing mapping).
+   - Use the following mapping:
+
+   | Entra ID Attribute | API Attribute |
+   | --- | --- |
+   | `extension_{AppClientID}_persona` | `urn:ietf:params:scim:schemas:extension:yourorgnamehere:1.0:User:Persona` |
+
+   - Save mappings.
+   - Ensure the mapping is enabled for update operations.
+
+4. **Update a regular user via full SCIM payload (Lab 1.6 style)**
+   - Use Graph Explorer (or Postman) and send a **POST** request to your inbound provisioning `bulkUpload` endpoint from Lab 1.
+   - Set header: `Content-Type: application/scim+json`.
+   - Start from `full-user.json`, set `persona` to your regular user value (for example `EndUser`), and keep `externalId` for an existing regular user so the operation becomes an update.
+   - Run query and verify HTTP `202 Accepted`.
+
+5. **Update a privileged user via full SCIM payload (Lab 1.6 style)**
+   - Send another **POST** request to the same `bulkUpload` endpoint.
+   - Use a second full payload for an existing privileged user and set `persona` to `Admin`, and keep `externalId` for an existing privileged user so the operation becomes an update.
+   - Run query and verify HTTP `202 Accepted`.
+   - Confirm this user has values suitable for persona-based AU membership rules in the next lab section.
+
+6. **Optional: Create a service user via full SCIM payload (Lab 1.6 style)**
+   - Send another **POST** request to the same `bulkUpload` endpoint.
+   - Use a full payload for the service  user and set `persona` to `Service`. Check for unique `externalID` to ensure it will create a new user.
+   - Run query and verify HTTP `202 Accepted`.
+   - Confirm this user has values suitable for persona-based AU membership rules in the next lab section.
+
+6. **Review provisioning logs and verify update operations**
+   - Check **Provisioning logs** for all provisioned users.
+   - Verify all entries show successful **Update** or **Create** operations.
+   - Resolve any mapping errors before moving on.
+
+&nbsp;
+
+## Lab 2.5 - Create Administrative Units for Personas
+
+In this section, you set up Administrative Units (AUs) in Entra ID for persona-based governance.
+
+### Tasks:
+
+1. **Create Administrative Units for your personas**
+   - Create one or more AUs based on the personas from Lab 2.1 (for example `Privileged Users`, `Service Accounts`).
+   - Go to **Microsoft Entra ID** and **Administrative Units** in the left menu, under **Manage**
+   - Click **+Add**. Give the AU a name and description. Let the "restricted" switch be disabled. Click **Review + create**
+
+2. **Define membership logic**
+   - Go into the newly created administrative unit. Click *Properties* in the left menu.
+   - Change *Membership type* to *Dynamic user*. Click *Add dynamic query*.
+   - Click *Get custom extension properties*. Paste the client ID saved from lab 2.3. Click *Refresh properties*
+   - Verify that you find your extension at the bottom of the *Property* drop down menu.
+   - Choose your directory extension. Set *Operator* to **Equals**. And write your persona-definition in *Value*.
+      -- Rule syntax should look something like this: `(user.extension_c1f4f0b8614b418fb6d6c0e40128b7e4_persona -eq "Admin")`
+   - Click **Save**. You will be taken back to the properties page. Click **Save** again, and confirm you will use dynamic query for membership with **Yes**.
+
+3. **Create administrative units for every persona**
+   - Repeat above steps for all personas you have defined.
+   - Validate that provisioned users are assigned to the correct AU.
+
+&nbsp;
+
+## Lab 2.6 - Use Administrative Units as Scope for Lifecycle Workflows (Leaver/Inactive Users Example)
+
+In this section, you create a Leaver workflow for deprovisioning and scope it to the Admin persona Administrative Unit so only privileged users are targeted for the inactive users flow.
+
+### Tasks:
+
+1. **Open Lifecycle Workflows in Entra ID**
+   - In the left menu, go to **Identity Governance** → **Lifecycle workflows**.
+
+2. **Create a Leaver workflow from template**
+   - Select **Workflows**.
+   - Click **+ Create workflow**.
+   - Choose the **Leaver** template named *Offboard inactive users*.
+   - Click **Select**.
+
+3. **Configure basic workflow details**
+   - Enter a workflow name (for example `Leaver - Admin Persona AU - Inactive Users`).
+   - Add description (for example describing deprovisioning of privileged admin accounts).
+   - Click **Next**.
+
+4. **Scope the workflow to the Admin Administrative Unit**
+   - In the workflow setup, open the **Administrations scopes** by clicking **No selected scopes**.
+   - Choose the correct AU. Click **Select**.
+   - Select the AU you created in Lab 2.5 for the `Admin` persona (for example `Privileged Users`).
+   - Confirm and continue.
+
+5. **Configure trigger and workflow tasks**
+   - Let the trigger type be **Sign-in activity**
+   - Choose **Days of inactivity** to feed your needs.
+   - 
+
+
+   - Keep Leaver tasks enabled appropriate for privileged users (for example: **Disable account**, **Remove user from all groups**, or **Delete user**).
+   - Verify task order and settings.
+   - Click **Review + create** and then **Create**.
+
+6. **Enable and test the workflow**
+   - Open the newly created workflow.
+   - Set workflow status to **On**.
+   - Run **Run on demand** for one test Admin user who is a member of the Admin AU.
+   - Verify the run is successful in **Runs history** and that deprovisioning tasks complete as expected.
+
+7. **Validate persona-scoped deprovisioning**
+   - Confirm the workflow only targeted admin users in the selected AU.
+   - Confirm users outside that AU (for example EndUsers) are not targeted by this workflow scope.
+   - Verify account disable/deprovisioning steps occurred correctly for the test user.
+
+&nbsp;
+
+## Lab 2.7 - Enable SCIM API and Test with Postman
+
+In this final section, you enable the SCIM API, configure app-based authentication, and validate API connectivity in Postman.
 
 > 📌 **Important**  
-> This lab uses the **SCIM 2.0 API** for direct programmatic access. This is different from Lab 1's "API-driven provisioning app," which uses a built-in Entra ID provisioning feature. The SCIM API is a paid add-on that requires licensing and billing setup.
-> Microsoft Entra SCIM Provisioning API: $0.002 Per 1 transaction (USD)
-
+> Microsoft Entra SCIM Provisioning API is billed per transaction.
 
 ### Prerequisites:
 - **Entra ID P1** license (or equivalent like P2, Microsoft 365 E3/E5)
@@ -98,227 +225,49 @@ In this section, you will enable the SCIM 2.0 API in Entra ID and set up authent
 ### Tasks:
 
 1. **Enable SCIM Provisioning API in Entra Admin Center**
-   - Sign in to [Microsoft Entra admin center](https://entra.microsoft.com/)
-   - In the left navigation, expand **ID Governance** and select **Dashboard**
-   - Locate the **SCIM Provisioning API** tile and click **Get Started**
-   - In the SCIM Provisioning API pane:
-     - Under **Link subscription**, select your Azure subscription
-     - Choose an existing **Resource group** or create a new one
-     - Review the **Billing Unit** details (every SCIM API call is billed per the pricing model)
-     - Click **Turn on**
-   - Wait for the feature to be enabled (may take a few minutes)
+   - Go to **Identity Governance** → **Dashboard**.
+   - Open the **SCIM Provisioning API** tile and complete subscription/resource group linking. This requires an Azure subscription and permissions to link payment to that seubscription and resource group.
+   - Turn on the feature.
 
-2. **Register an Application for SCIM API Authentication**
-   - Go to **Microsoft Entra** → **App registrations** → **+ New registration**
-   - Name: `ELUK26-SCIM-API-Client` (or similar)
-   - Supported account types: **Accounts in this organizational directory only**
-   - Click **Register**
-   - Save the following values:
+2. **Create app registration for SCIM API access**
+   - Create a new app registration (single-tenant).
+   - Save:
+     - **Tenant ID**
      - **Application (client) ID**
      - **Directory (tenant) ID**
+   - Add Microsoft Graph *application* permissions needed for your scenario. E.g. User.ReadWrite.All and Group.Read.All
+   - Grant admin consent.
+   - Create a client secret and copy it securely.
 
-3. **Grant API Permissions**
-   - In the app registration, go to **API permissions** → **+ Add a permission**
-   - Select **Microsoft Graph** → **Application permissions**
-   - Search for and grant the following permissions (select based on your use case):
-     - `User.ReadWrite.All` (read and write access to users)
-     - `User.EnableDisableAccount.All` (ability to disable/enable accounts)
-     - `User-LifeCycleInfo.ReadWrite.All` (update lifecycle attributes like leave dates)
-   - Click **Grant admin consent for [Tenant]**
-   - Verify that admin consent is shown as **Granted**
+3. **Create a Postman environment**
+   - Create an environment and add variables for:
+     - `tenant_id`
+     - `client_id`
+     - `client_secret`
+     - `token`
+   - Use environment variables in your token and SCIM API requests.
 
-4. **Create a Client Secret**
-   - In the app registration, go to **Certificates & secrets** → **+ New client secret**
-   - Description: `SCIM API authentication`
-   - Expires: Choose appropriate expiration (recommended: 12-24 months)
-   - Click **Add**
-   - **Important**: Copy and store the secret value securely - you cannot retrieve it again
-
-5. **Test Connectivity to SCIM API**
-   - Open Postman or a terminal, and first obtain an access token using OAuth 2.0 client credentials flow:
+4. **Test token retrieval and SCIM API connectivity**
+   - Request token (client credentials flow):
      ```
      POST https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
      Content-Type: application/x-www-form-urlencoded
-     
-     client_id={your_client_id}&client_secret={your_client_secret}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default&grant_type=client_credentials
+
+     client_id={client_id}&client_secret={client_secret}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default&grant_type=client_credentials
      ```
-   - Save the `access_token` from the response
-   - Test the SCIM endpoint:
+   - Save token to `token` in the environment. You can add this as a script on the above POST-request to auto-update token. 
+      ```
+      var jsonData = JSON.parse(responseBody);
+      postman.setEnvironmentVariable("token", jsonData.access_token);
+      ```
+   - Create a collection for all your SCIM-requests and reuse token (OAuth 2.0) under Authorization-config for the entire collection. All other requests can inherit from parent.
+   - Test SCIM API endpoint:
      ```
      GET https://graph.microsoft.com/rp/scim/serviceproviderconfig
      Authorization: Bearer {access_token}
      Accept: application/json
      ```
-   - Expected response (200 OK): Service provider configuration confirming the endpoint is accessible
+   - Expected result: HTTP `200 OK`.
 
-&nbsp;
-
-## Lab 2.3 - Build & Test Privileged User Payloads
-
-Now you will create and test SCIM 2.0 bulk request payloads to provision privileged users using the SCIM API endpoint.
-
-### Prerequisites:
-- Completed Lab 2.2 with valid access token and SCIM API enabled
-
-### Tasks:
-
-1. **Prepare Your Access Token**
-   - From Lab 2.2, obtain a fresh access token via OAuth 2.0 client credentials:
-     ```
-     POST https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
-     Content-Type: application/x-www-form-urlencoded
-     
-     client_id={your_client_id}&client_secret={your_client_secret}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default&grant_type=client_credentials
-     ```
-   - Store the `access_token` - valid for ~1 hour
-
-2. **Create Minimum Privileged User Payload**
-   - Start with the [privileged-user.json](../../../resources/resource-2-scim-sample-payloads/privileged-user.json) sample
-   - Modify the following fields for your tenant:
-     - `externalId`: Use a unique identifier (e.g., `priv-001`)
-     - `userName`: Apply your naming convention (e.g., `firstname.lastname.admin`)
-     - `displayName`: e.g., `FirstName LastName (Admin)`
-     - Email domain: Replace with your tenant domain (e.g., `user@contoso.com`)
-     - Custom schema namespace: Update to reflect your organization
-
-3. **Create Multiple Test Payloads**
-   - Create at least 2-3 SCIM bulk request variations:
-     - **Minimal privileged user**: externalId, userName, displayName, active
-     - **Enhanced with org attributes**: Add department, costCenter, division, organization
-     - **Full with custom extensions**: Include hiring dates, leave dates, and custom fields
-
-4. **POST Users via SCIM API**
-   - Use Postman or curl to send bulk requests to the SCIM API:
-     ```
-     POST https://graph.microsoft.com/rp/scim/Users
-     Authorization: Bearer {your_access_token}
-     Content-Type: application/scim+json
-     
-     {
-       "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-       "externalId": "priv-001",
-       "userName": "joe.bloggs.admin",
-       "displayName": "Joe Bloggs (Admin)",
-       "active": true,
-       "userType": "Privileged",
-       "name": {
-         "givenName": "Joe",
-         "familyName": "Bloggs"
-       },
-       "emails": [{
-         "primary": true,
-         "type": "work",
-         "value": "joe.bloggs.admin@yourtenant.onmicrosoft.com"
-       }]
-     }
-     ```
-   - Record the response and check for successful creation (HTTP 201 Created)
-   - Note the `id` returned in the response (you'll need this for updates/deletes)
-
-5. **Verify in Entra ID**
-   - Go to Microsoft Entra portal → Users
-   - Search for the newly created users by userName
-   - Verify all attributes were provisioned correctly
-   - Check custom attributes if visible in the user profile
-
-> 💡 **Note on Bulk Operations**  
-> The SCIM API also supports bulk operations for creating multiple users in one request. See the [Microsoft Learn SCIM API reference](https://learn.microsoft.com/en-us/entra/identity/app-provisioning/entra-id-scim-api-reference) for bulk request format details.
-
-&nbsp;
-
-## Lab 2.4 - Update & Deprovisioning Scenarios
-
-Test real-world provisioning scenarios including attribute updates and user deprovisioning via the SCIM API.
-
-### Prerequisites:
-- Completed Lab 2.3 with at least one created user and current access token
-
-### Tasks:
-
-1. **Perform PATCH Operations (Update Users)**
-   - Update an existing user's attributes using the SCIM API:
-     ```
-     PATCH https://graph.microsoft.com/rp/scim/Users/{user-id}
-     Authorization: Bearer {your_access_token}
-     Content-Type: application/scim+json
-     
-     {
-       "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-       "Operations": [{
-         "op": "replace",
-         "path": "title",
-         "value": "Senior Privileged Admin"
-       }]
-     }
-     ```
-   - Example updates: Change department, modify title, update costCenter
-   - Verify changes appear in Entra ID within a few seconds
-
-2. **Test State Transitions (Disable Users)**
-   - Change a user's `active` status from `true` to `false`:
-     ```
-     PATCH https://graph.microsoft.com/rp/scim/Users/{user-id}
-     Authorization: Bearer {your_access_token}
-     Content-Type: application/scim+json
-     
-     {
-       "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-       "Operations": [{
-         "op": "replace",
-         "path": "active",
-         "value": false
-       }]
-     }
-     ```
-   - Verify the user is disabled in Entra ID (marked as inactive)
-   - Try re-enabling by setting `active` to `true`
-
-3. **Deprovisioning (DELETE Operations)**
-   - Remove a test user via SCIM API:
-     ```
-     DELETE https://graph.microsoft.com/rp/scim/Users/{user-id}
-     Authorization: Bearer {your_access_token}
-     ```
-   - Verify the user is deleted from Entra ID (or moved to recycle bin based on retention settings)
-
-4. **Error Handling & Troubleshooting**
-   - Test with invalid data and document common errors:
-     - Missing required fields (HTTP 400 Bad Request)
-     - Invalid schema references (HTTP 400)
-     - Non-existent user ID (HTTP 404 Not Found)
-     - Duplicate externalId values (HTTP 409 Conflict)
-   - Review error responses from the SCIM API
-   - Document retry logic (transient errors should be retried)
-
-&nbsp;
-
-## Lab 2.5 - Apply Privileged RBACs & RMAU Assignment
-
-Connect your provisioned privileged users to governance controls by assigning them to a Restricted Management Administrative Unit.
-
-### Tasks:
-
-1. **Review Provisioned Privileged Users**
-   - List all users in Entra ID that match your privileged calling convention (e.g., `*.admin` suffix)
-   - Verify their `userType` attribute is set to "Privileged"
-
-2. **Create Restricted Management Administrative Unit (RMAU)**
-   - Follow the steps in Lab 2.6 below to create an RMAU
-   - Configure dynamic membership rules to automatically include all privileged users
-
-3. **Assign Roles at AU Scope**
-   - Assign an administrative role with scope limited to the RMAU
-   - Optionally: Delegate management to a dedicated Control Plane group
-
-&nbsp;
-
-## Lab 2.6 - Assign Privileged Accounts to Restricted Management Administrative Unit (RMAU)
-
-1. Create an [Administrative Unit with dynamic membership](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-members-dynamic?tabs=admin-center#add-rules-for-dynamic-membership-groups) named “Privileged Users” and enable “[Restricted management administrative unit](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-restricted-management)” during the creation process.
-
-2. Configure a rule depending on your naming convention for privileged users or other unique attributes (e.g., domain suffix for cloud-only accounts).
-
-    > 💡 **Optional**  
-    > Evaluate the option to configure [dynamic membership with the memberOf attribute](https://learn.microsoft.com/en-us/entra/identity/users/groups-dynamic-rule-member-of). This allows you to assign members of role-assignable groups or other privileged groups to RMAU automatically. Consider that this feature is in preview and take note of the warning about limitations from the [Microsoft Learn](https://learn.microsoft.com/en-us/entra/identity/users/groups-dynamic-rule-member-of) documentation.
-
-3. Assign a role [on the scope of the Administrative Unit](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/manage-roles-portal?tabs=admin-center#assign-roles-with-administrative-unit-scope-1) to regain access for managing privileged users. Choose a dedicated role-assignable group which will be used for Control Plane Management.
+> 💡 **Note**  
+> You can add additional Postman request examples later (create user, update user, disable user, delete user).
