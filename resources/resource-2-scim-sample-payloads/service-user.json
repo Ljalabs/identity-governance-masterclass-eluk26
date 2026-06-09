@@ -1,0 +1,47 @@
+{
+    "schemas": [
+        "urn:ietf:params:scim:api:messages:2.0:BulkRequest"
+    ],
+    "Operations": [
+        {
+            "method": "POST",
+            "bulkId": "3cabdd3d-f350-4ef6-ab45-fb69029a8723",
+            "path": "/Users",
+            "data": {
+                "schemas": [
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                    "urn:ietf:params:scim:schemas:extension:yourorgname:1.0:User"
+                ],
+                "externalId": "s-100",
+                "userName": "teams.flow.service",
+                "displayName": "Teams Flow ServiceAccount",
+                "active": false,
+                "name": {
+                    "familyName": "Flow",
+                    "givenName": "Teams"
+                },
+                "userType": "Privileged",
+                "emails": [
+                    {
+                        "primary": true,
+                        "type": "work",
+                        "value": "joe.bloggs+service@M365x91871532.onmicrosoft.com"
+                    }
+                ],
+                "nickName": "teams.flow.service",
+            
+                "preferredLanguage": "en-GB",
+                "timezone": "London",
+                "title": "Service Account",
+                
+                "urn:ietf:params:scim:schemas:extension:contoso:1.0:User": {
+                    "HireDate": "2026-06-14T08:00:00+02:00",
+                    "LeaveDate": null,
+                    "countryCode": "UK",
+                    "Persona": "Service"
+                }
+            }
+        }
+    ],
+    "failOnErrors": null
+}
