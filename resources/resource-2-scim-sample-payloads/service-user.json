@@ -38,7 +38,7 @@
                     "HireDate": "2026-06-14T08:00:00+02:00",
                     "LeaveDate": null,
                     "countryCode": "UK",
-                    "Persona": "Service"
+                    "Persona": "ServiceUser"
                 }
             }
         }

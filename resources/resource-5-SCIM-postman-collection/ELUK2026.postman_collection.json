@@ -1,0 +1,324 @@
+{
+  "info": {
+    "_postman_id": "c723816b-7477-4af0-a583-cd2f6d654948",
+    "name": "ELUK2026",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "158718"
+  },
+  "item": [
+    {
+      "name": "GetToken",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = JSON.parse(responseBody);\r",
+              "postman.setEnvironmentVariable(\"token\", jsonData.access_token)"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "client_id",
+              "value": "{{client_id}}",
+              "type": "text",
+              "uuid": "c5eeebbf-3ea9-4e4f-9f31-774dbe078247"
+            },
+            {
+              "key": "client_secret",
+              "value": "{{client_secret}}",
+              "type": "text",
+              "uuid": "f1d464bd-1e3e-4155-985f-eaeb1aae7b01"
+            },
+            {
+              "key": "scope",
+              "value": "https://graph.microsoft.com/.default",
+              "type": "text",
+              "uuid": "293647ae-3a77-44aa-aef2-240d05e93823"
+            },
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "type": "text",
+              "uuid": "8a8c363c-e5aa-4806-b112-94befccfa7ba"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://login.microsoftonline.com/{{tenant_id}}/oauth2/v2.0/token?Content-Type=application/x-www-form-urlencoded",
+          "protocol": "https",
+          "host": [
+            "login",
+            "microsoftonline",
+            "com"
+          ],
+          "path": [
+            "{{tenant_id}}",
+            "oauth2",
+            "v2.0",
+            "token"
+          ],
+          "query": [
+            {
+              "key": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetServiceProviderConfig",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "host": true,
+          "accept": true
+        }
+      },
+      "request": {
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "tokenType",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "key": "accessToken",
+              "value": "{{token}}",
+              "type": "string"
+            },
+            {
+              "key": "addTokenTo",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Host",
+            "value": "graph.microsoft.com",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://graph.microsoft.com/rp/scim/serviceproviderconfig",
+          "protocol": "https",
+          "host": [
+            "graph",
+            "microsoft",
+            "com"
+          ],
+          "path": [
+            "rp",
+            "scim",
+            "serviceproviderconfig"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetUsers",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "GetGroups",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://graph.microsoft.com/rp/scim/Groups",
+          "protocol": "https",
+          "host": [
+            "graph",
+            "microsoft",
+            "com"
+          ],
+          "path": [
+            "rp",
+            "scim",
+            "Groups"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GetUserByID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://graph.microsoft.com/rp/scim/Users/5864adf8-606c-42fd-b446-3df9d5f24a1b",
+          "protocol": "https",
+          "host": [
+            "graph",
+            "microsoft",
+            "com"
+          ],
+          "path": [
+            "rp",
+            "scim",
+            "Users",
+            "5864adf8-606c-42fd-b446-3df9d5f24a1b"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CreateUser",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/scim+json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"schemas\": [\r\n    \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n    \"urn:ietf:params:scim:schemas:extension:Microsoft:Entra:2.0:User\"\r\n  ],\r\n  \"active\": true,\r\n  \"displayName\": \"Superman (Admin)\",\r\n  \"userName\": \"superman.admin@{DOMAIN}.onmicrosoft.com\",\r\n  \"password\": \"SuperDuperSecret12345\",\r\n  \"name\": {\r\n    \"familyName\": \"Man\",\r\n    \"givenName\": \"Super\"\r\n  },\r\n  \"urn:ietf:params:scim:schemas:extension:Microsoft:Entra:2.0:User\": {\r\n    \"mailNickname\": \"superman.admin\"\r\n  }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://graph.microsoft.com/rp/scim/Users",
+          "protocol": "https",
+          "host": [
+            "graph",
+            "microsoft",
+            "com"
+          ],
+          "path": [
+            "rp",
+            "scim",
+            "Users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "UpdateUser",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/scim+json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"schemas\": [\"urn:ietf:params:scim:api:messages:2.0:PatchOp\"],\r\n  \"Operations\": [\r\n    {\r\n      \"op\": \"replace\",\r\n      \"path\": \"displayName\",\r\n      \"value\": \"SuperWoman (Admin)\"\r\n    }\r\n  ]\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://graph.microsoft.com/rp/scim/Users/e04f1554-3ae3-4751-90be-b87c55ff745c",
+          "protocol": "https",
+          "host": [
+            "graph",
+            "microsoft",
+            "com"
+          ],
+          "path": [
+            "rp",
+            "scim",
+            "Users",
+            "e04f1554-3ae3-4751-90be-b87c55ff745c"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      {
+        "key": "tokenType",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "accessToken",
+        "value": "{{token}}",
+        "type": "string"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": ""
+    }
+  ]
+}

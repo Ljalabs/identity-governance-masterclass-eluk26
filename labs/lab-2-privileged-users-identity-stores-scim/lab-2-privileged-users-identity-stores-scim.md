@@ -18,12 +18,12 @@ In this section, you define identity personas and the attribute model that will 
 1. **Define identity personas for your organization**
    - Create the personas you need, for example:
      - `EndUser` (standard employees)
-     - `Admin` (dedicated privileged accounts)
-     - `Service` (service accounts) - Optional!
+     - `AdminUser` (dedicated privileged accounts)
+     - `ServiceUser` (service accounts) - Optional!
 
 2. **Map attributes for each persona**
    - Include `Persona` as a custom extension attribute in your design, similar to how custom attributes (like hireDate/leaveDate examples from lab 1) are modeled.
-   - Document expected values for each persona (for example `EndUser`, `Admin`, `Service`) so you can reuse them consistently in Lab 2.2 and Lab 2.4. Only if you want to make more changes than adding persona.
+   - Document expected values for each persona (for example `EndUser`, `AdminUser`, `ServiceUser`) so you can reuse them consistently in Lab 2.2 and Lab 2.4. Only if you want to make more changes than adding persona.
 
 &nbsp;
 
@@ -34,9 +34,9 @@ In this section, you update the sample payloads so they reflect the personas and
 ### Tasks:
 
 1. **Review sample payload files**
-   - [privileged-user.json](../../resources/resource-2-scim-sample-payloads/privileged-user.json)  (e.g. persona Admin)
+   - [privileged-user.json](../../resources/resource-2-scim-sample-payloads/privileged-user.json)  (e.g. persona AdminUser)
    - [full-user.json](../../resources/resource-2-scim-sample-payloads/full-user.json) (e.g. persona EndUser)
-   - [service-user.json](../../resources/resource-2-scim-sample-payloads/service-user.json) (e.g. persona Service)
+   - [service-user.json](../../resources/resource-2-scim-sample-payloads/service-user.json) (e.g. persona ServiceUser)
 
 2. **Add or update persona-related attributes**
    - Add `persona` in your custom extension block (same pattern as other extension fields such as `HireDate` and `LeaveDate` in lab 1).
@@ -61,7 +61,7 @@ In this section, you create an app registration used for directory extension def
 ### Tasks:
 
 1. **Create app registration for directory extensions**
-   - Go to **Microsoft Entra admin center** → **App registrations** → **+ New registration**.
+   - Go to **Microsoft Entra** → **App registrations** → **+ New registration**.
    - Name: `ELUK26-Directory-Extensions` (or similar).
    - Supported account types: **Single tenant only - {TenantName}**.
    - Save:
@@ -117,13 +117,13 @@ In this section, you update the inbound provisioning app schema and mappings so 
 
 5. **Update a privileged user via full SCIM payload (Lab 1.6 style)**
    - Send another **POST** request to the same `bulkUpload` endpoint.
-   - Use a second full payload for an existing privileged user and set `persona` to `Admin`, and keep `externalId` for an existing privileged user so the operation becomes an update.
+   - Use a second full payload for an existing privileged user and set `persona` to `AdminUser`, and keep `externalId` for an existing privileged user so the operation becomes an update.
    - Run query and verify HTTP `202 Accepted`.
    - Confirm this user has values suitable for persona-based AU membership rules in the next lab section.
 
 6. **Optional: Create a service user via full SCIM payload (Lab 1.6 style)**
    - Send another **POST** request to the same `bulkUpload` endpoint.
-   - Use a full payload for the service  user and set `persona` to `Service`. Check for unique `externalID` to ensure it will create a new user.
+   - Use a full payload for the service  user and set `persona` to `ServiceUser`. Check for unique `externalID` to ensure it will create a new user.
    - Run query and verify HTTP `202 Accepted`.
    - Confirm this user has values suitable for persona-based AU membership rules in the next lab section.
 
@@ -141,7 +141,7 @@ In this section, you set up Administrative Units (AUs) in Entra ID for persona-b
 ### Tasks:
 
 1. **Create Administrative Units for your personas**
-   - Create one or more AUs based on the personas from Lab 2.1 (for example `Privileged Users`, `Service Accounts`).
+   - Create one or more AUs based on the personas from Lab 2.1 (for example `Admin Users`, `Service Accounts`).
    - Go to **Microsoft Entra ID** and **Administrative Units** in the left menu, under **Manage**
    - Click **+Add**. Give the AU a name and description. Let the "restricted" switch be disabled. Click **Review + create**
 
@@ -151,7 +151,7 @@ In this section, you set up Administrative Units (AUs) in Entra ID for persona-b
    - Click *Get custom extension properties*. Paste the client ID saved from lab 2.3. Click *Refresh properties*
    - Verify that you find your extension at the bottom of the *Property* drop down menu.
    - Choose your directory extension. Set *Operator* to **Equals**. And write your persona-definition in *Value*.
-      -- Rule syntax should look something like this: `(user.extension_c1f4f0b8614b418fb6d6c0e40128b7e4_persona -eq "Admin")`
+      -- Rule syntax should look something like this: `(user.extension_c1f4f0b8614b418fb6d6c0e40128b7e4_persona -eq "AdminUser")`
    - Click **Save**. You will be taken back to the properties page. Click **Save** again, and confirm you will use dynamic query for membership with **Yes**.
 
 3. **Create administrative units for every persona**
@@ -162,7 +162,7 @@ In this section, you set up Administrative Units (AUs) in Entra ID for persona-b
 
 ## Lab 2.6 - Use Administrative Units as Scope for Lifecycle Workflows (Leaver/Inactive Users Example)
 
-In this section, you create a Leaver workflow for deprovisioning and scope it to the Admin persona Administrative Unit so only privileged users are targeted for the inactive users flow.
+In this section, you create a Leaver workflow for deprovisioning and scope it to the AdminUser persona Administrative Unit so only privileged users are targeted for the inactive users flow.
 
 ### Tasks:
 
@@ -183,7 +183,7 @@ In this section, you create a Leaver workflow for deprovisioning and scope it to
 4. **Scope the workflow to the Admin Administrative Unit**
    - In the workflow setup, open the **Administrations scopes** by clicking **No selected scopes**.
    - Choose the correct AU. Click **Select**.
-   - Select the AU you created in Lab 2.5 for the `Admin` persona (for example `Privileged Users`).
+   - Select the AU you created in Lab 2.5 for the `AdminUser` persona (for example `Privileged Users`).
    - Confirm and continue.
 
 5. **Configure trigger and workflow tasks**
@@ -248,26 +248,15 @@ In this final section, you enable the SCIM API, configure app-based authenticati
    - Use environment variables in your token and SCIM API requests.
 
 4. **Test token retrieval and SCIM API connectivity**
-   - Request token (client credentials flow):
-     ```
-     POST https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
-     Content-Type: application/x-www-form-urlencoded
+   There are resource files available to get a head start on request to the SCIM 2.0 API.
+   Environment setup: [Environment](../../resources/resource-5-SCIM-postman-collection/ELUK2026.postman_environment)
+   Request Collection: [Collection](../../resources/resource-5-SCIM-postman-collection/ELUK2026.postman_collection.json)
+   Download the files and import them into Postman. You will need, tenantID, clientID and client secret as inputs in the environment.
 
-     client_id={client_id}&client_secret={client_secret}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default&grant_type=client_credentials
-     ```
-   - Save token to `token` in the environment. You can add this as a script on the above POST-request to auto-update token. 
-      ```
-      var jsonData = JSON.parse(responseBody);
-      postman.setEnvironmentVariable("token", jsonData.access_token);
-      ```
-   - Create a collection for all your SCIM-requests and reuse token (OAuth 2.0) under Authorization-config for the entire collection. All other requests can inherit from parent.
-   - Test SCIM API endpoint:
-     ```
-     GET https://graph.microsoft.com/rp/scim/serviceproviderconfig
-     Authorization: Bearer {access_token}
-     Accept: application/json
-     ```
-   - Expected result: HTTP `200 OK`.
+   - First you will have to request a token
+   - Save token to `token` in the environment. Script added in the POST-request if using resource files. 
+   - Create a collection for all your SCIM-requests and reuse token (OAuth 2.0) under Authorization config for the entire collection. All other requests can inherit from parent.
+   - Test SCIM API endpoint.
 
 > 💡 **Note**  
 > You can add additional Postman request examples later (create user, update user, disable user, delete user).
