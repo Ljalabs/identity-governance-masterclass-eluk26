@@ -304,7 +304,7 @@ In this final section, you enable the SCIM API, configure app-based authenticati
    Method: DELETE
    Minimum permissions: Group.ReadWrite.All
 
-   Play around with the endpoints and methods for the API to get to know it better!
+   Play around with the endpoints for the API to get to know it better!
 
 
 > 💡 **Note**  
