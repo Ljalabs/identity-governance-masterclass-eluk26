@@ -191,56 +191,32 @@ Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/servic
 4. Select blueprint and specify details (name, description, owner/sponsor settings as needed).
 5. Save and verify the agent identity is created.
 
-### Option 2: Create an Agent Identity with Microsoft Graph (Graph Explorer)
+### Option 2a: Create an Agent Identity with Microsoft Graph (Graph Explorer)
 
-#### Resource URI
+**Resource URI**
 
-`POST https://graph.microsoft.com/beta/identity/agentId/identities
+`POST https://graph.microsoft.com/beta/serviceprincipals/Microsoft.Graph.AgentIdentity`
 
 **Sample request body**  
 > Update property values to match your tenant and the latest beta schema.
 
 ```json
 {
-    "displayName": "Contoso Support Agent Identity",
-    "description": "Agent identity for support automation",
-    "blueprintId": "<YOUR-BLUEPRINT-ID>",
-    "owners": [
-        {
-            "userPrincipalName": "<YOUR-OWNER-USER>@<YOUR-TENANT-DOMAIN>"
-        }
-    ],
-    "sponsors": [
-        {
-            "userPrincipalName": "<YOUR-SPONSOR-USER>@<YOUR-TENANT-DOMAIN>"
-        }
-    ]
+	"displayName": "My Agent Identity",
+	"agentIdentityBlueprintId": "<my-agent-blueprint-id>",
+	"sponsors@odata.bind": [
+		"https://graph.microsoft.com/v1.0/users/<id>",
+		"https://graph.microsoft.com/v1.0/groups/<group-id>"
+	]
 }
 ```
 
-### Option 3: Create an Agent Blueprint with Microsoft Graph PowerShell SDK
+### Option 2b: Delete an Agent Identity with Microsoft Graph (Graph Explorer)
 
-```azurepowershell
-# Connect with delegated permission to create Agent ID blueprints
-Connect-MgGraph -Scopes "AgentIdentityManagement.ReadWrite.All"
-Select-MgProfile -Name "beta"
 
-$uri = "https://graph.microsoft.com/beta/identity/agentId/identities"
+**Resource URI**
 
-$body = @{
-    displayName = "Contoso Support Agent Identity"
-    description = "Agent identity for support automation"
-    blueprintId = "<YOUR-BLUEPRINT-ID>"
-    owners      = @(
-        @{ userPrincipalName = "<YOUR-OWNER-USER>@<YOUR-TENANT-DOMAIN>" }
-    )
-    sponsors    = @(
-        @{ userPrincipalName = "<YOUR-SPONSOR-USER>@<YOUR-TENANT-DOMAIN>" }
-    )
-} | ConvertTo-Json -Depth 10
-
-Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body -ContentType "application/json"
-```
+`DELETE https://graph.microsoft.com/beta/serviceprincipals/<agent-identity-id>`
 
 ## Lab 4.3 - Create a CA Policy targeting Agents
 
